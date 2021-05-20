@@ -1,8 +1,21 @@
+
+
+//
+//Board: Node32s
+//
+
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <PubSubClient.h>
+#include <PubSubClient_JSON.h>
+#include <MQTT.h>
+
 #include "ESPmDNS.h"
+
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
 
 #include "pins.h"
 #include "setting.h"
@@ -10,6 +23,8 @@
 #include "network.h"
 #include "mqtt.h"
 #include "valve.h"
+
+AsyncWebServer server(80);
 
 void setup() {
 #if defined(DEBUG_SERIAL)
@@ -28,7 +43,7 @@ void setup() {
         pinMode(relay[i], OUTPUT);
         pinMode(led[i], OUTPUT);
         delay(1);
-        digitalWrite(relay[i], LOW);
+        digitalWrite(relay[i], HIGH);
         digitalWrite(led[i], LOW);
     }
 
@@ -42,15 +57,28 @@ void setup() {
     }
 
     setupBlinker();
+    snprintf(sbuf, sizeof(sbuf), "Message: [%s]\n", MQTT_RELAY_TOPIC_RELAY_STATE);
+    telnetSerial(sbuf);
+
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(200, "text/plain", "Hi! I control irrigation.");
+    });
+    
+    AsyncElegantOTA.begin(&server);    // Start ElegantOTA
+    server.begin();
+    snprintf(sbuf, sizeof(sbuf), "HTTP server started\n");
+    telnetSerial(sbuf);
 }
 
 void loop() {
     if (relay_on > -1) {
-        if (millis() - relay_last_on >= relay_timeout) set_valve(relay_on, false);
+        if (millis() - relay_last_on >= relay_timeout) set_valve(relay_on, HIGH);
     }
 
     if (wifiReconnect()) {
-        ArduinoOTA.handle();
+        //ArduinoOTA.handle();
+        AsyncElegantOTA.loop();
+
         telnetLoop();
         mqtt_connected = mqttReconnect();
 

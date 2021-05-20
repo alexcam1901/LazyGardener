@@ -42,4 +42,3 @@ void setupBlinker() {
     timerAlarmWrite(timer, blink_interval * 1000, true);
     timerAlarmEnable(timer);
 }
-
