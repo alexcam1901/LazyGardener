@@ -11,28 +11,28 @@ void mqttCallback(const MQTT::Publish& pub) {
 
   } else if ( topic.substring(topic.length() - 3, topic.length()) == MQTT_RELAY_TOPIC_SET_APPENDIX) {
 
-      uint8_t relay = topic.substring(topic.length() - 5, topic.length() - 4).toInt();
-      
-      if ( topic.charAt(topic.length() - 7) == '/') {
-        relay = topic.substring(topic.length() - 6, topic.length() - 4).toInt();
-      }
-      
-      String state = pub.payload_string();
-      
-      snprintf(sbuf, sizeof(sbuf), "[mqttCallback] State: %s\n", state);
+    uint8_t relay = topic.substring(topic.length() - 5, topic.length() - 4).toInt();
+
+    if ( topic.charAt(topic.length() - 7) == '/') {
+      relay = topic.substring(topic.length() - 6, topic.length() - 4).toInt();
+    }
+
+    String state = pub.payload_string();
+
+    snprintf(sbuf, sizeof(sbuf), "[mqttCallback] State: %s\n", state);
+    telnetSerial(sbuf);
+
+    if (state == MQTT_STATE_ON) {
+      snprintf(sbuf, sizeof(sbuf), "[mqttCallback state_on] State: %s\n", state);
       telnetSerial(sbuf);
-      
-      if (state == MQTT_STATE_ON) {
-        snprintf(sbuf, sizeof(sbuf), "[mqttCallback state_on] State: %s\n", state);
-        telnetSerial(sbuf);
-        set_valve(relay, true);
-      }
-      
-      else if (state == MQTT_STATE_OFF) {
-        snprintf(sbuf, sizeof(sbuf), "[mqttCallback state_off] State: %s\n", state);
-        telnetSerial(sbuf);
-        set_valve(relay, false);
-      }
+      set_valve(relay, true);
+    }
+
+    else if (state == MQTT_STATE_OFF) {
+      snprintf(sbuf, sizeof(sbuf), "[mqttCallback state_off] State: %s\n", state);
+      telnetSerial(sbuf);
+      set_valve(relay, false);
+    }
   }
 }
 
@@ -70,9 +70,9 @@ bool sendStatus() {
     char buf[5];
     snprintf(buf, sizeof(buf), "%i", WiFi.RSSI());
     ok = mqtt.publish(MQTT::Publish(MQTT_RSSI_TOPIC, buf)
-                                .set_retain()
-                                .set_qos(MQTT_QOS)
-                                );
+                      .set_retain()
+                      .set_qos(MQTT_QOS)
+                     );
   }
 
   if (ok) {
@@ -93,13 +93,25 @@ void setupMqtt() {
 }
 
 bool mqttReconnect() {
+
   static uint32_t lastReconnectAttempt = 0;
+  static uint32_t firstReconnectAttempt = 0;
 
   if (!mqtt.connected()) {
     blink_enabled = true;
     uint32_t now = millis();
 
+    if (now - firstReconnectAttempt > MQTT_CONNECTION_TIMEOUT) {
+      snprintf(sbuf, sizeof(sbuf), "Max MQTT reconnect timeout reached, resetting.\n");
+      telnetSerial(sbuf);
+      ESP.restart();
+    }
+
     if (now - lastReconnectAttempt > CONNECTION_INTERVAL) {
+      if (firstReconnectAttempt == 0) {
+        firstReconnectAttempt == now;
+      }
+      
       snprintf(sbuf, sizeof(sbuf), "Connecting to MQTT: ");
       telnetSerial(sbuf);
       lastReconnectAttempt = now;
@@ -110,12 +122,13 @@ bool mqttReconnect() {
         topic.concat("/+/");
         topic.concat(MQTT_RELAY_TOPIC_SET_APPENDIX);
         mqtt.subscribe(MQTT::Subscribe()
-                                .add_topic(MQTT_RELAY_TOPIC_RELAY_STATE, MQTT_QOS)
-                                .add_topic(MQTT_RELAY_TOPIC_SET_APPENDIX)
-                                .add_topic(topic));
+                       .add_topic(MQTT_RELAY_TOPIC_RELAY_STATE, MQTT_QOS)
+                       .add_topic(MQTT_RELAY_TOPIC_SET_APPENDIX)
+                       .add_topic(topic));
 
         lastReconnectAttempt = 0;
-
+        firstReconnectAttempt = 0;
+        
         snprintf(sbuf, sizeof(sbuf), "OK\n");
         telnetSerial(sbuf);
 
