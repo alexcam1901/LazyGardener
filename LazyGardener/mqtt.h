@@ -17,14 +17,22 @@ void mqttCallback(const MQTT::Publish& pub) {
         relay = topic.substring(topic.length() - 6, topic.length() - 4).toInt();
       }
       
-   
-      snprintf(sbuf, sizeof(sbuf), "DECODED: [%s]\n", String(relay).c_str());
-      telnetSerial(sbuf);
-   
       String state = pub.payload_string();
-
-      if (state == MQTT_STATE_ON) set_valve(relay, LOW);
-      else if (state == MQTT_STATE_OFF) set_valve(relay, HIGH);
+      
+      snprintf(sbuf, sizeof(sbuf), "[mqttCallback] State: %s\n", state);
+      telnetSerial(sbuf);
+      
+      if (state == MQTT_STATE_ON) {
+        snprintf(sbuf, sizeof(sbuf), "[mqttCallback state_on] State: %s\n", state);
+        telnetSerial(sbuf);
+        set_valve(relay, true);
+      }
+      
+      else if (state == MQTT_STATE_OFF) {
+        snprintf(sbuf, sizeof(sbuf), "[mqttCallback state_off] State: %s\n", state);
+        telnetSerial(sbuf);
+        set_valve(relay, false);
+      }
   }
 }
 
@@ -34,16 +42,16 @@ bool send_state(int valve, bool state) {
   topic.concat("/");
   topic.concat(valve);
 
-  snprintf(sbuf, sizeof(sbuf), "Sending valve %i - state: %u, topic: %s\n", valve, !state, topic.c_str());
+  snprintf(sbuf, sizeof(sbuf), "[send_state] Sending valve %i - state: %s, topic: %s\n", valve, (state ? MQTT_STATE_ON : MQTT_STATE_OFF), topic.c_str());
   telnetSerial(sbuf);
 
   bool ok = mqtt.publish(MQTT::Publish(topic, (state ? MQTT_STATE_ON : MQTT_STATE_OFF)).set_retain().set_qos(MQTT_QOS));
 
   if (ok) {
-    snprintf(sbuf, sizeof(sbuf), "Sending state OK\n");
+    snprintf(sbuf, sizeof(sbuf), "[send_state] Sending state OK\n");
 
   } else {
-    snprintf(sbuf, sizeof(sbuf), "Sending state failed\n");
+    snprintf(sbuf, sizeof(sbuf), "[send_state] Sending state failed\n");
   }
 
   telnetSerial(sbuf);

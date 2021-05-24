@@ -43,7 +43,7 @@ void setup() {
         pinMode(relay[i], OUTPUT);
         pinMode(led[i], OUTPUT);
         delay(1);
-        digitalWrite(relay[i], HIGH);
+        digitalWrite(relay[i], VALVE_OFF);
         digitalWrite(led[i], LOW);
     }
 
@@ -72,9 +72,11 @@ void setup() {
 
 void loop() {
     if (relay_on > -1) {
-        if (millis() - relay_last_on >= relay_timeout) set_valve(relay_on, HIGH);
+        if (millis() - relay_last_on >= relay_timeout) set_valve(relay_on, false);
     }
 
+    failsafe();
+        
     if (wifiReconnect()) {
         //ArduinoOTA.handle();
         AsyncElegantOTA.loop();
