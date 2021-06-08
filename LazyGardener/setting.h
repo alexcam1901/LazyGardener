@@ -45,8 +45,8 @@ const uint32_t default_relay_timeout[NO_OF_RELAYS] = {
     600000,  // 10min
     600000,  // 10min
     600000,  // 10min 
-    600000,  // 10min 
-    600000,  // 10min 
+    300000,  // 10min 
+    300000,  // 10min 
     600000,  // 10min 
     600000,  // 10min 
     600000,  // 10min 

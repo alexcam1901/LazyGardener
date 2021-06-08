@@ -71,8 +71,12 @@ void setup() {
 }
 
 void loop() {
-    if (relay_on > -1) {
-        if (millis() - relay_last_on >= relay_timeout) set_valve(relay_on, false);
+    if (valve_on() > -1) {
+        if (millis() - relay_last_on >= relay_timeout) {
+          snprintf(sbuf, sizeof(sbuf), "Valve %i timeout reached.\n", valve_on());
+          telnetSerial(sbuf);
+          set_valve(valve_on(), false);
+        }
     }
 
     failsafe();

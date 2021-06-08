@@ -1,13 +1,13 @@
 bool set_valve(int valve, bool state) {
     if (valve > -1 && valve <= NO_OF_RELAYS) {
-        snprintf(sbuf, sizeof(sbuf), "[set_valve] State: %u\n", state);
-        telnetSerial(sbuf);
+        //snprintf(sbuf, sizeof(sbuf), "[set_valve] State: %u\n", state);
+        //telnetSerial(sbuf);
 
-        digitalWrite(RELAY_24V_PIN, state);
-        delay(5);
+        //digitalWrite(RELAY_24V_PIN, state);
+        //delay(5);
 
         if (state && relay_on > -1) {  // only one can be on at the time, if another is already on, turn it off
-            snprintf(sbuf, sizeof(sbuf), "[set_valve] Turning valve %i OFF\n", relay_on);
+            snprintf(sbuf, sizeof(sbuf), "[set_valve] Valve %i already ON, turning OFF\n", relay_on);
             telnetSerial(sbuf);
 
             digitalWrite(relay[relay_on], VALVE_OFF);
@@ -30,12 +30,14 @@ bool set_valve(int valve, bool state) {
         snprintf(sbuf, sizeof(sbuf), "\n");
         telnetSerial(sbuf);
 
-        relay_on = (state ? valve : -1);
-        snprintf(sbuf, sizeof(sbuf), "[set_valve] Relay_on State: %i\n", relay_on);
-        telnetSerial(sbuf);
+        if (valve == relay_on) {
+          relay_on = (state ? valve : -1);
+          //snprintf(sbuf, sizeof(sbuf), "[set_valve] Relay_on State: %i\n", relay_on);
+          //telnetSerial(sbuf);
+        }
         
         digitalWrite(relay[valve], (state ? VALVE_ON : VALVE_OFF));
-        digitalWrite(led[valve], state);
+        //digitalWrite(led[valve], state);
 
         send_state(valve, state);
 
@@ -43,6 +45,18 @@ bool set_valve(int valve, bool state) {
     }
 
     return false;
+}
+
+int valve_on() {
+  
+  for (byte i = 0; i < NO_OF_RELAYS; i++) {
+    if (digitalRead(relay[i]) == VALVE_ON) {
+      return i;
+    }
+  }
+
+  return -1;
+
 }
 
 void failsafe() {
